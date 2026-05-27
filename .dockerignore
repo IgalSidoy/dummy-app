@@ -1,0 +1,13 @@
+.git
+.github
+.next
+out
+node_modules
+npm-debug.log*
+.env*
+.DS_Store
+README.md
+AGENTS.md
+CLAUDE.md
+.cursor
+.vscode
