@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 # ───────────────────────── Dependencies ─────────────────────────
-FROM node:20-alpine AS deps
+FROM asafandigal.jfrog.io/docker/node:20-alpine AS deps
 WORKDIR /app
 
 # Copy lockfile separately so the npm ci layer is cached when source changes.
@@ -9,7 +9,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 # ───────────────────────── Build ────────────────────────────────
-FROM node:20-alpine AS build
+FROM asafandigal.jfrog.io/docker/node:20-alpine AS build
 WORKDIR /app
 
 ARG NEXT_PUBLIC_COMMIT_SHA=local
@@ -24,7 +24,7 @@ COPY . .
 RUN npm run build
 
 # ───────────────────────── Runtime ──────────────────────────────
-FROM node:20-alpine AS runtime
+FROM asafandigal.jfrog.io/docker/node:20-alpine AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production
