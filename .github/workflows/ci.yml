@@ -114,6 +114,11 @@ jobs:
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
+        with:
+          # Auto-enable GitHub Pages on the first run so the operator
+          # doesn't have to flip Settings -> Pages -> Source manually.
+          # Relies on the workflow's `pages: write` permission below.
+          enablement: true
 
       - name: Build static export
         env:
