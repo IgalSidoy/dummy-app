@@ -68,16 +68,21 @@ jobs:
         # below) and the push run under the narrower scope of the prod-github
         # runtime-environment access token.
         #
-        # FLY_PROD_GITHUB_USERNAME is the "docker-username" value shown
-        # alongside the token in Fly Web's token-creation dialog. It must
+        # PROD_DOCKER_USERNAME is the "docker-username" value shown alongside
+        # the token in Fly Web's token-creation dialog (stored as a secret so
+        # the email/identity stays out of the public workflow YAML). It must
         # match the token's principal exactly — Artifactory returns 401 if
         # they differ.
         env:
           FLY_PROD_GITHUB_TOKEN: ${{ secrets.FLY_PROD_GITHUB_TOKEN }}
-          FLY_PROD_GITHUB_USERNAME: igals+hm@jfrog.com
+          FLY_PROD_GITHUB_USERNAME: ${{ secrets.PROD_DOCKER_USERNAME }}
         run: |
           if [ -z "${FLY_PROD_GITHUB_TOKEN}" ]; then
             echo "::error::FLY_PROD_GITHUB_TOKEN secret is not set on this repo."
+            exit 1
+          fi
+          if [ -z "${FLY_PROD_GITHUB_USERNAME}" ]; then
+            echo "::error::PROD_DOCKER_USERNAME secret is not set on this repo."
             exit 1
           fi
           printf '%s' "${FLY_PROD_GITHUB_TOKEN}" | docker login \
