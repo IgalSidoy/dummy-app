@@ -62,17 +62,30 @@ jobs:
       - name: Setup JFrog Fly
         uses: jfrog/fly-action@v1
 
+      - name: Snapshot fly-action's OIDC docker credentials
+        # jfrog/fly-action@v1 writes an OIDC-issued credential into
+        # ~/.docker/config.json. We copy it aside so the scoped-token login
+        # below can override the active config for the `FROM` pull without
+        # losing the OIDC creds we still need for the push.
+        run: |
+          mkdir -p "${HOME}/.docker"
+          if [ -f "${HOME}/.docker/config.json" ]; then
+            cp "${HOME}/.docker/config.json" /tmp/docker-config.oidc.json
+          else
+            echo "::warning::fly-action did not produce ~/.docker/config.json — the push step will fail unless OIDC creds are recreated."
+            echo '{}' > /tmp/docker-config.oidc.json
+          fi
+
       - name: Log in to Fly registry with prod-github scoped token
-        # Overrides the OIDC-issued docker credential that jfrog/fly-action@v1
-        # writes to ~/.docker/config.json so the pull (`FROM` in the build
-        # below) and the push run under the narrower scope of the prod-github
-        # runtime-environment access token.
+        # Overrides the OIDC-issued docker credential so the `FROM` pull in
+        # the build step below runs under the narrower scope of the
+        # prod-github runtime-environment access token. The push step
+        # afterwards restores OIDC creds because the scoped token does not
+        # have deploy/write permission on the docker repo.
         #
         # PROD_DOCKER_USERNAME is the "docker-username" value shown alongside
         # the token in Fly Web's token-creation dialog (stored as a secret so
-        # the email/identity stays out of the public workflow YAML). It must
-        # match the token's principal exactly — Artifactory returns 401 if
-        # they differ.
+        # the email/identity stays out of the public workflow YAML).
         env:
           FLY_PROD_GITHUB_TOKEN: ${{ secrets.FLY_PROD_GITHUB_TOKEN }}
           FLY_PROD_GITHUB_USERNAME: ${{ secrets.PROD_DOCKER_USERNAME }}
@@ -100,7 +113,7 @@ jobs:
           echo "latest=${BASE}:latest" >> "$GITHUB_OUTPUT"
           echo "sha=${BASE}:sha-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
-      - name: Build image
+      - name: Build image (FROM pulled under prod-github scope)
         run: |
           docker build \
             --file Dockerfile \
@@ -109,7 +122,14 @@ jobs:
             --build-arg "NEXT_PUBLIC_COMMIT_SHA=${{ github.sha }}" \
             .
 
-      - name: Push image
+      - name: Restore OIDC docker credentials for push
+        # Swap the scoped-token credential back out for the OIDC credential
+        # fly-action created at job start, since the prod-github token has
+        # no deploy/write permission on the docker repo.
+        run: |
+          cp /tmp/docker-config.oidc.json "${HOME}/.docker/config.json"
+
+      - name: Push image (under fly-action OIDC)
         run: |
           docker push "${{ steps.tags.outputs.latest }}"
           docker push "${{ steps.tags.outputs.sha }}"
