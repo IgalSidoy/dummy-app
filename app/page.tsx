@@ -4,8 +4,14 @@ import { useState } from "react";
 
 const COMMIT_SHA = process.env.NEXT_PUBLIC_COMMIT_SHA ?? "local-dev";
 
+function randomHexColor(): string {
+  const value = Math.floor(Math.random() * 0x1000000);
+  return `#${value.toString(16).padStart(6, "0")}`;
+}
+
 export default function Home() {
   const [count, setCount] = useState(0);
+  const [color, setColor] = useState<string | null>(null);
 
   return (
     <main className="flex flex-1 items-center justify-center bg-zinc-50 p-8 dark:bg-zinc-950">
@@ -31,6 +37,25 @@ export default function Home() {
             <span className="font-mono font-semibold tabular-nums">
               {count}
             </span>
+          </span>
+        </div>
+
+        <div className="mt-6 flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => setColor(randomHexColor())}
+            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          >
+            Random color
+          </button>
+          <div
+            role="img"
+            aria-label={color ? `Random color ${color}` : "No color picked yet"}
+            style={{ backgroundColor: color ?? undefined }}
+            className="h-12 w-12 rounded-lg border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800"
+          />
+          <span className="font-mono text-xs uppercase tracking-wide text-zinc-700 dark:text-zinc-300">
+            {color ?? "—"}
           </span>
         </div>
 
