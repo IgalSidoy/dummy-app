@@ -62,6 +62,41 @@ jobs:
       - name: Setup JFrog Fly
         uses: jfrog/fly-action@v1
 
+      - name: Log in to Fly registry with prod-github scoped token
+        # Overrides the OIDC-issued docker credential that jfrog/fly-action@v1
+        # writes to ~/.docker/config.json so the pull (`FROM` in the build
+        # below) and the push run under the narrower scope of the prod-github
+        # runtime environment.
+        #
+        # The username MUST match the token's `sub` JWT claim — Artifactory
+        # rejects the login otherwise. Decoding it from the token itself keeps
+        # this workflow agnostic to whoever minted the token in Fly Web.
+        env:
+          FLY_PROD_GITHUB_TOKEN: ${{ secrets.FLY_PROD_GITHUB_TOKEN }}
+        run: |
+          if [ -z "${FLY_PROD_GITHUB_TOKEN}" ]; then
+            echo "::error::FLY_PROD_GITHUB_TOKEN secret is not set on this repo."
+            exit 1
+          fi
+          SUBJECT=$(FLY_PROD_GITHUB_TOKEN="${FLY_PROD_GITHUB_TOKEN}" python3 -c '
+          import base64, json, os, sys
+          token = os.environ["FLY_PROD_GITHUB_TOKEN"].strip()
+          parts = token.split(".")
+          if len(parts) < 2:
+              sys.exit("FLY_PROD_GITHUB_TOKEN is not a JWT")
+          payload = parts[1] + "=" * (-len(parts[1]) % 4)
+          data = json.loads(base64.urlsafe_b64decode(payload))
+          sub = data.get("sub", "")
+          if not sub:
+              sys.exit("JWT has no `sub` claim")
+          print(sub)
+          ')
+          echo "::add-mask::${SUBJECT}"
+          printf '%s' "${FLY_PROD_GITHUB_TOKEN}" | docker login \
+            "${FLY_REGISTRY_SUBDOMAIN}" \
+            --username "${SUBJECT}" \
+            --password-stdin
+
       - name: Resolve image tags
         id: tags
         run: |
