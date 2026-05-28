@@ -60,6 +60,13 @@ const FINDINGS: ReadonlyArray<Finding> = [
     expected:
       "A default (e.g. auto-detected 'production') environment that surfaces the running image out of the box, without forcing token creation up front.",
   },
+  {
+    area: "Flyman chat (repo / source context)",
+    observed:
+      "Flyman is not very helpful on questions tied to the actual repo source. Asked a simple one — 'show me the dummy-app URL' — which is published in the README, and the assistant could not find it.",
+    expected:
+      "Flyman should read the connected repo's README / source (it already knows the repo is connected) and answer basic questions like 'what's the live URL?' from there.",
+  },
 ];
 
 function randomHexColor(): string {
