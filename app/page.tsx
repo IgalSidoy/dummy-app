@@ -11,26 +11,55 @@ const FLY_ACCOUNT: ReadonlyArray<readonly [string, string]> = [
   ["GitHub user", "igalsidoy"],
 ];
 
-const WHAT_WORKED: ReadonlyArray<string> = [
-  "jfrog/fly-action@v1 + GitHub OIDC: zero static tokens to rotate in CI.",
-  "Action auto-detects installed package managers (npm, docker) and wires them up.",
-  "README → public generic artifact in <30 lines of CI (upload + distribute). Underrated.",
-  "Once OIDC creds are in place, docker push to the Fly registry is a one-liner.",
-];
+type Finding = {
+  area: string;
+  observed: string;
+  expected: string;
+};
 
-const FRICTION: ReadonlyArray<string> = [
-  "npm registry: the action reroutes npm to Fly; had to manually pin back to registry.npmjs.org so `npm ci` of public deps would resolve.",
-  "GitHub Pages: required a manual “Settings → Pages → Source: GitHub Actions” click until I added `enablement: true` to actions/configure-pages.",
-  "Private base + public push: ~5 CI iterations to land — snapshot the OIDC docker creds, log in with a prod-github scoped token for the FROM pull, swap back to OIDC for the push.",
-  "Scoped-token “docker-username” is NOT your email — it’s the value shown in the Fly Web token-creation dialog. Stash it as a repo secret (PROD_DOCKER_USERNAME).",
-  "buildx broke the pull-during-build path on a private base; falling back to plain `docker build` fixed it.",
-];
-
-const RECOMMENDATIONS: ReadonlyArray<string> = [
-  "First-class docs recipe: “Private base image + OIDC push” (the OIDC-snapshot + scoped-token swap dance).",
-  "Document the npm registry override behaviour explicitly + how to opt out for public deps.",
-  "Surface jfrog/fly-action/distribute more prominently — it’s the fastest path to a public download URL.",
-  "Show where “docker-username” comes from in the Fly Web token-creation flow.",
+const FINDINGS: ReadonlyArray<Finding> = [
+  {
+    area: "Login / register",
+    observed:
+      "Navigating to https://fly.jfrog.ai redirects to /dashboard, which is protected, so I get bounced to /login. The login page has no way to register a new account.",
+    expected:
+      "A visible REGISTER button on the login page so first-timers can sign up without hunting for a separate URL.",
+  },
+  {
+    area: "Signup password",
+    observed:
+      "The password field has no client-side validation. In particular, nothing warns me if CAPS LOCK is on while I'm typing.",
+    expected:
+      "A CAPS LOCK indicator on the password field (and basic strength / format hints) before I submit.",
+  },
+  {
+    area: "OTP",
+    observed:
+      "After typing the last OTP digit I still have to click Submit.",
+    expected:
+      "Auto-submit on the final digit — the modern convention everywhere else.",
+  },
+  {
+    area: "Signup loading screen",
+    observed:
+      "While the registration request is in flight, the screen shows a slow text animation that reads like movie subtitles describing the signup steps.",
+    expected:
+      "Use that real estate to tell me about the product (capabilities, screenshots) — or just show a normal progress indicator. The subtitle animation feels slow and uninformative.",
+  },
+  {
+    area: "Dashboard freshness after CI setup",
+    observed:
+      "After the MCP configured my CI to use jfrog/fly-action and the CI ran successfully, the Fly dashboard didn't reflect 'workflow configured' until I refreshed the page twice.",
+    expected:
+      "The dashboard should poll / push-update when a workflow first reports in, not require manual refresh.",
+  },
+  {
+    area: "Environments",
+    observed:
+      "No default environment exists. To see the running image of my service I had to manually create an environment, create a token, then override the existing docker login with the new token.",
+    expected:
+      "A default (e.g. auto-detected 'production') environment that surfaces the running image out of the box, without forcing token creation up front.",
+  },
 ];
 
 function randomHexColor(): string {
@@ -111,15 +140,12 @@ export default function Home() {
               JFrog Fly onboarding — findings
             </h2>
             <span className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              dummy-app · 12 commits
+              user feedback
             </span>
           </header>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            This repo was the sandbox for onboarding to JFrog Fly end-to-end:
-            GitHub OIDC auth, npm + Docker through the Fly registry, README
-            published as a public generic artifact, plus a parallel GitHub
-            Pages deploy. These are the things that worked, the things that
-            cost time, and what I&apos;d hand to the docs team.
+            Notes from going through the JFrog Fly signup → first deploy flow
+            end-to-end. Sharing as-is for the Fly team.
           </p>
 
           <h3 className="mt-6 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
@@ -136,44 +162,53 @@ export default function Home() {
             ))}
           </dl>
 
-          <h3 className="mt-6 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-            What worked
+          <h3 className="mt-6 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            Findings
           </h3>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-700 dark:text-zinc-300">
-            {WHAT_WORKED.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-
-          <h3 className="mt-6 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
-            Friction
-          </h3>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-700 dark:text-zinc-300">
-            {FRICTION.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-
-          <h3 className="mt-6 text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-400">
-            Recommendations
-          </h3>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-700 dark:text-zinc-300">
-            {RECOMMENDATIONS.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-
-          <p className="mt-6 text-xs text-zinc-500 dark:text-zinc-400">
-            Live image:{" "}
-            <code className="font-mono">
-              asafandigal.jfrog.io/docker/igalsidoy/dummy-app:latest
-            </code>
-            . Public README:{" "}
-            <code className="font-mono">
-              {`{FLY_URL}/public/generic/dummy-app-readme/[LATEST]/README.md`}
-            </code>
-            .
-          </p>
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+                  <th scope="col" className="w-8 py-2 pr-3 font-medium">
+                    #
+                  </th>
+                  <th
+                    scope="col"
+                    className="w-40 py-2 pr-3 font-medium sm:w-48"
+                  >
+                    Area
+                  </th>
+                  <th scope="col" className="py-2 pr-3 font-medium">
+                    What happened
+                  </th>
+                  <th scope="col" className="py-2 font-medium">
+                    What I&apos;d expect
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {FINDINGS.map((finding, i) => (
+                  <tr
+                    key={finding.area}
+                    className="border-b border-zinc-100 align-top last:border-0 odd:bg-zinc-50/60 dark:border-zinc-800 dark:odd:bg-zinc-800/30"
+                  >
+                    <td className="py-3 pr-3 font-mono text-zinc-500 dark:text-zinc-400">
+                      {i + 1}
+                    </td>
+                    <td className="py-3 pr-3 font-medium text-zinc-800 dark:text-zinc-200">
+                      {finding.area}
+                    </td>
+                    <td className="py-3 pr-3 text-zinc-700 dark:text-zinc-300">
+                      {finding.observed}
+                    </td>
+                    <td className="py-3 text-zinc-700 dark:text-zinc-300">
+                      {finding.expected}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       </div>
     </main>
