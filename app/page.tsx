@@ -80,7 +80,7 @@ export default function Home() {
 
   return (
     <main className="flex flex-1 items-start justify-center bg-zinc-50 p-8 dark:bg-zinc-950">
-      <div className="flex w-full max-w-2xl flex-col gap-6">
+      <div className="flex w-3/4 flex-col gap-6">
         <section className="w-full rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
             Hello from dummy-app
